@@ -1,0 +1,6 @@
+#! /bin/bash
+
+openssl req -new -newkey rsa:2048 -keyout servidor.pem -passout pass:clavesecreta -out servidor.csr -subj "/C=ES/ST=ASTURIAS/L=OVIEDO/O=IES DOCTOR FLEMING/CN=DEPARTAMENTO DE INFORMATICA"
+openssl x509 -req -in servidor.csr -days 3650 -signkey servidor.pem -passin pass:clavesecreta -out servidor.crt
+openssl pkcs12 -export -in servidor.crt -inkey servidor.pem -passin pass:clavesecreta -out keystore.p12 -name servidor -passout pass:practicas
+rm servidor.csr
