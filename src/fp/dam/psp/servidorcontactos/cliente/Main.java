@@ -40,6 +40,8 @@ public class Main {
             byte [] encriptedKey = cipher.doFinal(key.getEncoded());
             Base64.Encoder encoder = Base64.getEncoder();
             out.writeUTF(encoder.encodeToString(encriptedKey));
+
+            // Enviar al servidor el algoritmo de cifrado simétrico
             out.writeUTF("AES/ECB/PKCS5Padding");
         } catch (IOException | GeneralSecurityException e) {
             throw new RuntimeException(e);
