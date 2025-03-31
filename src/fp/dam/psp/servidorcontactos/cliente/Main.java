@@ -36,13 +36,20 @@ public class Main {
             KeyGenerator kg = KeyGenerator.getInstance("AES");
             kg.init(256);
             SecretKey key = kg.generateKey();
-            Cipher cipher = Cipher.getInstance(in.readUTF());
+            Cipher cipher = Cipher.getInstance(certificate.getPublicKey().getAlgorithm());
+            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
             byte [] encriptedKey = cipher.doFinal(key.getEncoded());
             Base64.Encoder encoder = Base64.getEncoder();
             out.writeUTF(encoder.encodeToString(encriptedKey));
 
             // Enviar al servidor el algoritmo de cifrado simétrico
-            out.writeUTF("AES/ECB/PKCS5Padding");
+            out.writeUTF("AES");
+
+            // Prueba descifrado
+            Cipher sCipher = Cipher.getInstance("AES");
+            sCipher.init(Cipher.DECRYPT_MODE, key);
+            String mensaje = new String(sCipher.doFinal(decoder.decode(in.readUTF())));
+            System.out.println(mensaje);
         } catch (IOException | GeneralSecurityException e) {
             throw new RuntimeException(e);
         }
