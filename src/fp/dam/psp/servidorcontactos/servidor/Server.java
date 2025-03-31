@@ -14,7 +14,6 @@ public class Server {
     public static void main(String[] args) throws IOException, KeyStoreException, CertificateException, NoSuchAlgorithmException, UnrecoverableKeyException {
         KeyStore keyStore = KeyStore.getInstance("pkcs12");
         keyStore.load(Server.class.getResourceAsStream("/keystore.p12"), "practicas".toCharArray());
-        System.out.println(keyStore.getType());
         X509Certificate certificate = (X509Certificate) keyStore.getCertificate("servidor");
         if (certificate != null) {
             PrivateKey privateKey = (PrivateKey) keyStore.getKey("servidor", "practicas".toCharArray());
@@ -26,10 +25,10 @@ public class Server {
                     service.submit(new RequestHandler(serverSocket.accept(), certificate, privateKey));
             }
             else
-                System.err.println("Error leyendo clave privada");
+                System.err.println("El almacén de claves no contiene la clave privada");
         }
         else
-            System.err.println("Error leyendo certificado");
+            System.err.println("El almacén de claves no contiene el certificado");
     }
 
 }
