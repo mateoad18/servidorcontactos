@@ -27,10 +27,12 @@ public class RequestHandler implements Runnable {
     @Override
     public void run() {
         try (socket) {
+            System.out.println(socket.getInetAddress());
             Base64.Encoder encoder = Base64.getEncoder();
             DataInputStream in = new DataInputStream(socket.getInputStream());
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-            out.writeUTF(encoder.encodeToString(certificate.getEncoded()));
+            String b64Certificate = encoder.encodeToString(certificate.getEncoded());
+            out.writeUTF(b64Certificate);
             while (true);
         } catch (IOException | GeneralSecurityException e) {
             System.err.println("Error: " + e.getLocalizedMessage() + " : " +

@@ -24,7 +24,7 @@ public class Main {
             CertificateFactory cf = CertificateFactory.getInstance("X509");
             X509Certificate certificate = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certificateBytes));
             PublicKey publicKey = certificate.getPublicKey();
-            System.out.println(certificate);
+            System.out.println(certificate.getSubjectX500Principal().getName());
         } catch (IOException | CertificateException e) {
             throw new RuntimeException(e);
         }
