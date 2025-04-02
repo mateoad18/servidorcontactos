@@ -29,7 +29,10 @@ public class Main {
             X509Certificate certificate = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certificateBytes));
             PublicKey publicKey = certificate.getPublicKey();
 
-            // Crear clave secreta
+            // Crear clave secreta.
+            // Modificar el siguiente código para generar la clave según se explica en
+            // https://www.baeldung.com/java-aes-encryption-decryption usando el algoritmo
+            // de derivación de clave PBKDF2WithHmacSHA256.
             KeyGenerator kg = KeyGenerator.getInstance("AES");
             kg.init(256);
             SecretKey key = kg.generateKey();
@@ -39,11 +42,14 @@ public class Main {
             byte [] encriptedKey = cipher.doFinal(key.getEncoded());
             // Enviar al servidor la clave secreta cifrada y codificada en Base64
             out.writeUTF(Base64.getEncoder().encodeToString(encriptedKey));
-            // Enviar al servidor el algoritmo de cifrado simétrico
+            // Enviar al servidor el algoritmo
+            // Modificar este código para enviar el algoritmo "AES/GCM/NoPadding" y los parámetros adicionales.
             out.writeUTF("AES");
 
             // Realizar petición
             String peticion = "Hola servidor";
+            // Modificar el siguiente código para cifrar usando "AES/GCM/NoPadding" tal y como se explica en
+            // https://www.baeldung.com/java-aes-encryption-decryption
             Cipher encrypCipher = Cipher.getInstance("AES");
             encrypCipher.init(Cipher.ENCRYPT_MODE, key);
             out.writeUTF(Base64.getEncoder().encodeToString(encrypCipher.doFinal(peticion.getBytes(StandardCharsets.UTF_8))));
