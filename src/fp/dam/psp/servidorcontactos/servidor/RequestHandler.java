@@ -67,8 +67,13 @@ public class RequestHandler implements Runnable {
     void leerPeticion() throws IOException, IllegalBlockSizeException, BadPaddingException {
         String peticion = new String(decryptCipher.doFinal(decoder.decode(in.readUTF())));
 
-        String respuesta = "Petición recibida: " + peticion;
-        out.writeUTF(encoder.encodeToString(encryptCipher.doFinal(respuesta.getBytes(StandardCharsets.UTF_8))));
+        StringBuilder respuesta = new StringBuilder();
+        respuesta.append("Petición recibida: ");
+        respuesta.append(peticion);
+        respuesta.append("\n");
+        respuesta.append("Respuesta: hola cliente");
+
+        out.writeUTF(encoder.encodeToString(encryptCipher.doFinal(respuesta.toString().getBytes(StandardCharsets.UTF_8))));
     }
 
 }

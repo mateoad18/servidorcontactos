@@ -47,7 +47,7 @@ public class Main {
             out.writeUTF("AES");
 
             // Realizar petición
-            String peticion = "Hola servidor";
+            String peticion = "hola servidor";
             // Modificar el siguiente código para cifrar usando "AES/GCM/NoPadding" tal y como se explica en
             // https://www.baeldung.com/java-aes-encryption-decryption
             Cipher encrypCipher = Cipher.getInstance("AES");
