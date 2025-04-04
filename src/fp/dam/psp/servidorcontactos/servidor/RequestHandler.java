@@ -49,7 +49,9 @@ public class RequestHandler implements Runnable {
             // simétrico no algoritmo "AES/GCM/NoPadding".
             // Leer el vector de inicialización (iv) usado por el algoritmo "AES/GCM/NoPadding" en lugar del algoritmo (linea 56).
             // {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{
-
+            /*
+            * Cifrar las petciones del cliente(el cliente manda al servidor las periciones que este debe de hacer y,
+            *  el servidor debe de cifrar las peticiones y el propio contenido*/
             // Leer clave secreta cifrada enviada por el cliente, decodificar B64 y descifrarla
             byte[] encodedKey = cipher.doFinal(decoder.decode(in.readUTF()));
             String algorithm = in.readUTF();
