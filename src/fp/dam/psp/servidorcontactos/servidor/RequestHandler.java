@@ -45,9 +45,8 @@ public class RequestHandler implements Runnable {
             Cipher cipher = Cipher.getInstance(privateKey.getAlgorithm());
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
 
-            // Modificar este bloque de código para generar la clave según se explica en
-            // https://www.baeldung.com/java-aes-encryption-decryption usando el algoritmo
-            // de derivación de clave PBKDF2WithHmacSHA256.
+            // Modificar este bloque de código para generar los cipher para cifrado
+            // simétrico no algoritmo "AES/GCM/NoPadding".
             // Leer el vector de inicialización (iv) usado por el algoritmo "AES/GCM/NoPadding" en lugar del algoritmo (linea 56).
             // {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{
 
