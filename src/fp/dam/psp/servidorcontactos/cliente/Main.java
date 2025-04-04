@@ -27,24 +27,27 @@ public class Main {
             byte[] certificateBytes = Base64.getDecoder().decode(b64Certificate);
             CertificateFactory cf = CertificateFactory.getInstance("X509");
             X509Certificate certificate = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certificateBytes));
-            PublicKey publicKey = certificate.getPublicKey();
 
-            // Crear clave secreta.
-            // Modificar el siguiente código para generar la clave según se explica en
+            // Modificar este bloque de código para generar la clave según se explica en
             // https://www.baeldung.com/java-aes-encryption-decryption usando el algoritmo
             // de derivación de clave PBKDF2WithHmacSHA256.
+            // Se enviará el vector de inicialización (iv) usado por el algoritmo "AES/GCM/NoPadding" en lugar del algoritmo (linea 48).
+            // {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{
+
+            // Crear clave secreta.
             KeyGenerator kg = KeyGenerator.getInstance("AES");
             kg.init(256);
             SecretKey key = kg.generateKey();
             // Cifrar la clave secreta con la clave pública del servidor
             Cipher cipher = Cipher.getInstance(certificate.getPublicKey().getAlgorithm());
-            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-            byte [] encriptedKey = cipher.doFinal(key.getEncoded());
+            cipher.init(Cipher.ENCRYPT_MODE, certificate);
+            byte[] encriptedKey = cipher.doFinal(key.getEncoded());
             // Enviar al servidor la clave secreta cifrada y codificada en Base64
             out.writeUTF(Base64.getEncoder().encodeToString(encriptedKey));
             // Enviar al servidor el algoritmo
-            // Modificar este código para enviar el algoritmo "AES/GCM/NoPadding" y los parámetros adicionales.
             out.writeUTF("AES");
+
+            // }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 
             // Realizar petición
             String peticion = "hola servidor";
