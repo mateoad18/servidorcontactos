@@ -16,6 +16,7 @@ import java.security.cert.X509Certificate;
 import java.util.Base64;
 
 public class Main {
+    //Para hacer format el atajo es CTRL+ALT+L
 
     public static void main(String[] args) {
         try (Socket socket = new Socket("localhost", 9000)) {
@@ -34,7 +35,7 @@ public class Main {
             // Se enviará el vector de inicialización (iv) usado por el algoritmo "AES/GCM/NoPadding" en lugar del algoritmo (linea 48).
             // {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{
 
-            // Crear clave secreta.
+           /* // Crear clave secreta.
             KeyGenerator kg = KeyGenerator.getInstance("AES");
             kg.init(256);
             SecretKey key = kg.generateKey();
@@ -45,7 +46,10 @@ public class Main {
             // Enviar al servidor la clave secreta cifrada y codificada en Base64
             out.writeUTF(Base64.getEncoder().encodeToString(encriptedKey));
             // Enviar al servidor el algoritmo
-            out.writeUTF("AES");
+            out.writeUTF("AES");*/
+
+
+
 
             // }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 
