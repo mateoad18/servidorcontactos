@@ -45,6 +45,12 @@ public class RequestHandler implements Runnable {
             Cipher cipher = Cipher.getInstance(privateKey.getAlgorithm());
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
 
+            // Modificar este bloque de código para generar la clave según se explica en
+            // https://www.baeldung.com/java-aes-encryption-decryption usando el algoritmo
+            // de derivación de clave PBKDF2WithHmacSHA256.
+            // Leer el vector de inicialización (iv) usado por el algoritmo "AES/GCM/NoPadding" en lugar del algoritmo (linea 56).
+            // {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{
+
             // Leer clave secreta cifrada enviada por el cliente, decodificar B64 y descifrarla
             byte[] encodedKey = cipher.doFinal(decoder.decode(in.readUTF()));
             String algorithm = in.readUTF();
@@ -57,14 +63,16 @@ public class RequestHandler implements Runnable {
             decryptCipher = Cipher.getInstance(algorithm);
             decryptCipher.init(Cipher.DECRYPT_MODE, key);
 
-            leerPeticion();
+            // }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+
+            procesarPeticion();
         } catch (IOException | GeneralSecurityException e) {
             System.err.println("Error: " + e.getLocalizedMessage() + " : " +
                     socket.getInetAddress() + " : " + LocalDateTime.now());
         }
     }
 
-    void leerPeticion() throws IOException, IllegalBlockSizeException, BadPaddingException {
+    void procesarPeticion() throws IOException, IllegalBlockSizeException, BadPaddingException {
         String peticion = new String(decryptCipher.doFinal(decoder.decode(in.readUTF())));
 
         StringBuilder respuesta = new StringBuilder();
