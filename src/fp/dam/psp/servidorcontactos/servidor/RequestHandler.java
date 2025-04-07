@@ -1,6 +1,7 @@
 package fp.dam.psp.servidorcontactos.servidor;
 
 import javax.crypto.*;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -50,19 +51,20 @@ public class RequestHandler implements Runnable {
             // Leer el vector de inicialización (iv) usado por el algoritmo "AES/GCM/NoPadding" en lugar del algoritmo (linea 56).
             // {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{
             /*
-            * Cifrar las petciones del cliente(el cliente manda al servidor las periciones que este debe de hacer y,
-            *  el servidor debe de cifrar las peticiones y el propio contenido*/
+             * Cifrar las petciones del cliente(el cliente manda al servidor las periciones que este debe de hacer y,
+             *  el servidor debe de cifrar las peticiones y el propio contenido*/
             // Leer clave secreta cifrada enviada por el cliente, decodificar B64 y descifrarla
             byte[] encodedKey = cipher.doFinal(decoder.decode(in.readUTF()));
-            String algorithm = in.readUTF();
+            byte[] iv = Base64.getDecoder().decode(in.readUTF());
             // Decodificarla como un objeto SecretKey
-            SecretKey key = new SecretKeySpec(encodedKey, algorithm);
+            SecretKey key = new SecretKeySpec(encodedKey, "AES");
 
             // Crear los Cipher para cifrar y descifrar con la clave secreta
-            encryptCipher = Cipher.getInstance(algorithm);
-            encryptCipher.init(Cipher.ENCRYPT_MODE, key);
-            decryptCipher = Cipher.getInstance(algorithm);
-            decryptCipher.init(Cipher.DECRYPT_MODE, key);
+            GCMParameterSpec spec = new GCMParameterSpec(128, iv);
+            encryptCipher = Cipher.getInstance("AES/GCM/NoPadding");
+            encryptCipher.init(Cipher.ENCRYPT_MODE, key, spec);
+            decryptCipher = Cipher.getInstance("AES/GCM/NoPadding");
+            decryptCipher.init(Cipher.DECRYPT_MODE, key, spec);
 
             // }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 
