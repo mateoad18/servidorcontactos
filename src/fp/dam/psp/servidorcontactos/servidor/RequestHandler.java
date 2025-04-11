@@ -12,6 +12,7 @@ import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Base64;
 
 public class RequestHandler implements Runnable {
@@ -26,10 +27,14 @@ public class RequestHandler implements Runnable {
     private Cipher encryptCipher;
     private Cipher decryptCipher;
 
-    public RequestHandler(Socket socket, X509Certificate certificate, PrivateKey privateKey) throws IOException {
+    // ArrayList para almacenar los contactos
+    private ArrayList<Contacto> contactos;
+
+    public RequestHandler(Socket socket, X509Certificate certificate, PrivateKey privateKey, ArrayList<Contacto> contactos) throws IOException {
         this.socket = socket;
         this.certificate = certificate;
         this.privateKey = privateKey;
+        this.contactos = contactos;
         socket.setSoTimeout(10000);
         in = new DataInputStream(socket.getInputStream());
         out = new DataOutputStream(socket.getOutputStream());
@@ -42,20 +47,13 @@ public class RequestHandler implements Runnable {
             out.writeUTF(encoder.encodeToString(certificate.getEncoded()));
 
             // Crear un Cipher para descifrar la clave secreta que enviará el cliente
-            // con la clave privada del servidor
             Cipher cipher = Cipher.getInstance(privateKey.getAlgorithm());
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
 
-            // Modificar este bloque de código para generar los cipher para cifrado
-            // simétrico no algoritmo "AES/GCM/NoPadding".
-            // Leer el vector de inicialización (iv) usado por el algoritmo "AES/GCM/NoPadding" en lugar del algoritmo (linea 56).
-            // {{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{
-            /*
-             * Cifrar las petciones del cliente(el cliente manda al servidor las periciones que este debe de hacer y,
-             *  el servidor debe de cifrar las peticiones y el propio contenido*/
             // Leer clave secreta cifrada enviada por el cliente, decodificar B64 y descifrarla
             byte[] encodedKey = cipher.doFinal(decoder.decode(in.readUTF()));
             byte[] iv = Base64.getDecoder().decode(in.readUTF());
+
             // Decodificarla como un objeto SecretKey
             SecretKey key = new SecretKeySpec(encodedKey, "AES");
 
@@ -66,8 +64,7 @@ public class RequestHandler implements Runnable {
             decryptCipher = Cipher.getInstance("AES/GCM/NoPadding");
             decryptCipher.init(Cipher.DECRYPT_MODE, key, spec);
 
-            // }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
-
+            // Procesar la petición
             procesarPeticion();
         } catch (IOException | GeneralSecurityException e) {
             System.err.println("Error: " + e.getLocalizedMessage() + " : " +
@@ -76,15 +73,86 @@ public class RequestHandler implements Runnable {
     }
 
     void procesarPeticion() throws IOException, IllegalBlockSizeException, BadPaddingException {
+        // Leer la petición cifrada, decodificarla y descifrarla
         String peticion = new String(decryptCipher.doFinal(decoder.decode(in.readUTF())));
 
-        StringBuilder respuesta = new StringBuilder();
-        respuesta.append("Petición recibida: ");
-        respuesta.append(peticion);
-        respuesta.append("\n");
-        respuesta.append("Respuesta: hola cliente");
+        // Procesar la petición
+        String respuesta = tratarPeticion(peticion);
 
-        out.writeUTF(encoder.encodeToString(encryptCipher.doFinal(respuesta.toString().getBytes(StandardCharsets.UTF_8))));
+        // Cifrar la respuesta y enviarla de vuelta al cliente
+        out.writeUTF(encoder.encodeToString(encryptCipher.doFinal(respuesta.getBytes(StandardCharsets.UTF_8))));
     }
 
+    private String tratarPeticion(String cadena) {
+        String salida = "";
+        if (!cadena.contains(":") && !cadena.equals("listar")) {
+            salida = "Error: el comando debe estar como se especifica";
+        } else {
+            String[] trozos = cadena.split(":");
+
+            switch (trozos[0]) {
+                case "listar":
+                    salida = mostrarContactos();
+                    break;
+                case "buscar":
+                    salida = buscarContacto(trozos[1]);
+                    break;
+                case "eliminar":
+                    salida = eliminarContacto(trozos[1]);
+                    break;
+                case "añadir":
+                    if (trozos.length == 3) {
+                        salida = añadirContacto(trozos[1], Integer.parseInt(trozos[2]));
+                    } else {
+                        salida = "Faltan datos"; // Error por parámetros incorrectos
+                    }
+                    break;
+                default:
+                    salida = "Comando incorrecto"; // Comando no reconocido
+                    break;
+            }
+        }
+        return salida;
+    }
+
+    private String añadirContacto(String nombre, int telefono) {
+        for (Contacto contacto : contactos) {
+            if (contacto.getNombre().equals(nombre)) {
+                return "Contacto repetido"; // Contacto ya existente
+            }
+        }
+        contactos.add(new Contacto(nombre, telefono));
+        return "Contacto añadido correctamente";
+    }
+
+    private String eliminarContacto(String nombre) {
+        for (int i = 0; i < contactos.size(); i++) {
+            if (contactos.get(i).getNombre().equals(nombre)) {
+                contactos.remove(i);
+                return "Borrado correctamente";
+            }
+        }
+        return "No se ha podido eliminar, contacto no encontrado";
+    }
+
+    private String buscarContacto(String nombre) {
+        for (Contacto contacto : contactos) {
+            if (contacto.getNombre().equals(nombre)) {
+                return "OK:" + contacto.toString();
+            }
+        }
+        return "No existe el contacto";
+    }
+
+    private String mostrarContactos() {
+        if (contactos.isEmpty()) {
+            return "No hay contactos disponibles.";
+        }
+
+        StringBuilder cadena = new StringBuilder("Lista de contactos:");
+        for (Contacto contacto : contactos) {
+            cadena.append("\n").append(contacto.toString());
+        }
+        return cadena.toString();
+    }
 }
