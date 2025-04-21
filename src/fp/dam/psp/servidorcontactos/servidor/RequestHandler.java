@@ -2,6 +2,7 @@ package fp.dam.psp.servidorcontactos.servidor;
 
 import javax.crypto.*;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -11,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.security.spec.KeySpec;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -46,25 +48,27 @@ public class RequestHandler implements Runnable {
             // Enviar el certificado del servidor codificado en Base64
             out.writeUTF(encoder.encodeToString(certificate.getEncoded()));
 
-            // Crear un Cipher para descifrar la clave secreta que enviará el cliente
-            Cipher cipher = Cipher.getInstance(privateKey.getAlgorithm());
-            cipher.init(Cipher.DECRYPT_MODE, privateKey);
-
-            // Leer clave secreta cifrada enviada por el cliente, decodificar B64 y descifrarla
-            byte[] encodedKey = cipher.doFinal(decoder.decode(in.readUTF()));
+            // Recibir salt, clave secreta cifrada, IV
+            byte[] salt = Base64.getDecoder().decode(in.readUTF());
+            byte[] encryptedKey = Base64.getDecoder().decode(in.readUTF());
             byte[] iv = Base64.getDecoder().decode(in.readUTF());
 
-            // Decodificarla como un objeto SecretKey
-            SecretKey key = new SecretKeySpec(encodedKey, "AES");
+            // Descifrar clave secreta
+            Cipher cipher = Cipher.getInstance(privateKey.getAlgorithm());
+            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            byte[] decodedKey = cipher.doFinal(encryptedKey);
 
-            // Crear los Cipher para cifrar y descifrar con la clave secreta
+            // Reconstruir clave secreta
+            SecretKey key = new SecretKeySpec(decodedKey, "AES");
+
+            // Configurar Ciphers AES/GCM
             GCMParameterSpec spec = new GCMParameterSpec(128, iv);
             encryptCipher = Cipher.getInstance("AES/GCM/NoPadding");
             encryptCipher.init(Cipher.ENCRYPT_MODE, key, spec);
             decryptCipher = Cipher.getInstance("AES/GCM/NoPadding");
             decryptCipher.init(Cipher.DECRYPT_MODE, key, spec);
 
-            // Procesar la petición
+            // Procesar petición
             procesarPeticion();
         } catch (IOException | GeneralSecurityException e) {
             System.err.println("Error: " + e.getLocalizedMessage() + " : " +
@@ -72,46 +76,57 @@ public class RequestHandler implements Runnable {
         }
     }
 
-    void procesarPeticion() throws IOException, IllegalBlockSizeException, BadPaddingException {
-        // Leer la petición cifrada, decodificarla y descifrarla
-        String peticion = new String(decryptCipher.doFinal(decoder.decode(in.readUTF())));
+    public static SecretKey getKeyFromPassword(String password, byte[] salt) throws GeneralSecurityException {
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 65536, 256);
+        SecretKey secret = new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
+        return secret;
+    }
 
-        // Procesar la petición
-        String respuesta = tratarPeticion(peticion);
-
-        // Cifrar la respuesta y enviarla de vuelta al cliente
-        out.writeUTF(encoder.encodeToString(encryptCipher.doFinal(respuesta.getBytes(StandardCharsets.UTF_8))));
+    void procesarPeticion() {
+        try {
+            String peticion = new String(decryptCipher.doFinal(decoder.decode(in.readUTF())));
+            String respuesta = tratarPeticion(peticion);
+            out.writeUTF(encoder.encodeToString(encryptCipher.doFinal(respuesta.getBytes(StandardCharsets.UTF_8))));
+        } catch (Exception e) {
+            System.err.println("Error al procesar la petición: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private String tratarPeticion(String cadena) {
-        String salida = "";
-        if (!cadena.contains(":") && !cadena.equals("listar")) {
-            salida = "Error: el comando debe estar como se especifica";
-        } else {
-            String[] trozos = cadena.split(":");
+        String salida;
 
-            switch (trozos[0]) {
-                case "listar":
-                    salida = mostrarContactos();
-                    break;
-                case "buscar":
-                    salida = buscarContacto(trozos[1]);
-                    break;
-                case "eliminar":
-                    salida = eliminarContacto(trozos[1]);
-                    break;
-                case "añadir":
-                    if (trozos.length == 3) {
-                        salida = añadirContacto(trozos[1], Integer.parseInt(trozos[2]));
-                    } else {
-                        salida = "Faltan datos"; // Error por parámetros incorrectos
-                    }
-                    break;
-                default:
-                    salida = "Comando incorrecto"; // Comando no reconocido
-                    break;
+        if (cadena.equals("listar")) {
+            salida = mostrarContactos();
+        } else if (cadena.startsWith("buscar:")) {
+            String nombre = cadena.substring("buscar:".length());
+            salida = buscarContacto(nombre);
+        } else if (cadena.startsWith("eliminar:")) {
+            String nombre = cadena.substring("eliminar:".length());
+            salida = eliminarContacto(nombre);
+        } else if (cadena.startsWith("añadir:")) {
+            // obtener la parte después de "añadir:"
+            String resto = cadena.substring("añadir:".length());
+
+            // buscar el último ":" para separar nombre y teléfono (por si el nombre contiene ':')
+            int indexUltimoDosPuntos = resto.lastIndexOf(":");
+            if (indexUltimoDosPuntos == -1) {
+                salida = "Error: formato incorrecto para añadir";
+            } else {
+                String nombre = resto.substring(0, indexUltimoDosPuntos);
+                String telefonoStr = resto.substring(indexUltimoDosPuntos + 1);
+                try {
+                    int telefono = Integer.parseInt(telefonoStr);
+                    salida = añadirContacto(nombre, telefono);
+                } catch (NumberFormatException e) {
+                    salida = "Error: el número de teléfono no es válido";
+                }
             }
+        } else {
+            salida = "Comando incorrecto o mal formado";
         }
+
         return salida;
     }
 

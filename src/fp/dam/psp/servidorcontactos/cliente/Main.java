@@ -30,63 +30,59 @@ public class Main {
             DataInputStream in = new DataInputStream(socket.getInputStream());
             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 
-            // ---- Leer certificado enviado por el servidor
+            // ---- Leer certificado del servidor
             String b64Certificate = in.readUTF();
             byte[] certificateBytes = Base64.getDecoder().decode(b64Certificate);
             CertificateFactory cf = CertificateFactory.getInstance("X509");
             X509Certificate certificate = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certificateBytes));
 
-            // ---- Crear clave secreta
-            SecretKey key = getKeyFromPassword("iesdoctorFleming");
+            // ---- Enviar salt para derivación de clave
+            byte[] salt = new byte[16];
+            new SecureRandom().nextBytes(salt);
+            out.writeUTF(Base64.getEncoder().encodeToString(salt));
+
+            // ---- Derivar clave secreta desde contraseña y salt
+            SecretKey key = getKeyFromPassword("iesdoctorFleming", salt);
 
             // ---- Cifrar la clave secreta con la clave pública del servidor
             Cipher cipher = Cipher.getInstance(certificate.getPublicKey().getAlgorithm());
-            cipher.init(Cipher.ENCRYPT_MODE, certificate);
+            cipher.init(Cipher.ENCRYPT_MODE, certificate.getPublicKey());
             byte[] encryptedKey = cipher.doFinal(key.getEncoded());
-
-            // ---- Enviar la clave secreta cifrada al servidor
             out.writeUTF(Base64.getEncoder().encodeToString(encryptedKey));
 
-            // ---- Enviar el vector de inicialización
+            // ---- Enviar IV para AES/GCM
             byte[] iv = new byte[12];
             new SecureRandom().nextBytes(iv);
             out.writeUTF(Base64.getEncoder().encodeToString(iv));
 
-            // ---- Leer la petición del cliente desde el teclado
+            // ---- Leer comando del usuario
             Scanner scanner = new Scanner(System.in);
-            System.out.println("Introduce tu petición (listar, buscar:<nombre>, eliminar:<nombre>, añadir:<nombre>:<telefono>):");
+            System.out.println("Introduce tu petición:");
             String peticion = scanner.nextLine();
 
-            // ---- Cifrar la petición usando AES/GCM/NoPadding con IV
+            // ---- Cifrar la petición
             Cipher encryptCipher = Cipher.getInstance("AES/GCM/NoPadding");
             GCMParameterSpec gcmSpec = new GCMParameterSpec(128, iv);
             encryptCipher.init(Cipher.ENCRYPT_MODE, key, gcmSpec);
             byte[] encryptedPeticion = encryptCipher.doFinal(peticion.getBytes(StandardCharsets.UTF_8));
-
-            // ---- Enviar la petición cifrada al servidor
             out.writeUTF(Base64.getEncoder().encodeToString(encryptedPeticion));
 
-            // ---- Leer y descifrar la respuesta del servidor
+            // ---- Leer y descifrar respuesta del servidor
             byte[] respuestaCifrada = Base64.getDecoder().decode(in.readUTF());
             Cipher decryptCipher = Cipher.getInstance("AES/GCM/NoPadding");
             decryptCipher.init(Cipher.DECRYPT_MODE, key, gcmSpec);
             String respuesta = new String(decryptCipher.doFinal(respuestaCifrada), StandardCharsets.UTF_8);
 
-            // ---- Mostrar la respuesta del servidor
             System.out.println("Respuesta del servidor: " + respuesta);
-
 
         } catch (IOException | GeneralSecurityException e) {
             e.printStackTrace();
         }
     }
 
-    public static SecretKey getKeyFromPassword(String password) throws GeneralSecurityException {
-        byte[] salt = new byte[16];
-        new SecureRandom().nextBytes(salt);
+    public static SecretKey getKeyFromPassword(String password, byte[] salt) throws GeneralSecurityException {
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         KeySpec spec = new PBEKeySpec(password.toCharArray(), salt, 65536, 256);
-        SecretKey secret = new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
-        return secret;
+        return new SecretKeySpec(factory.generateSecret(spec).getEncoded(), "AES");
     }
 }
