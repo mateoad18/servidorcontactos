@@ -36,10 +36,9 @@ public class Main {
             CertificateFactory cf = CertificateFactory.getInstance("X509");
             X509Certificate certificate = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(certificateBytes));
 
-            // ---- Enviar salt para derivación de clave
+            // ---- Crear salt para derivación de clave
             byte[] salt = new byte[16];
             new SecureRandom().nextBytes(salt);
-            out.writeUTF(Base64.getEncoder().encodeToString(salt));
 
             // ---- Derivar clave secreta desde contraseña y salt
             SecretKey key = getKeyFromPassword("iesdoctorFleming", salt);

@@ -37,7 +37,7 @@ public class RequestHandler implements Runnable {
         this.certificate = certificate;
         this.privateKey = privateKey;
         this.contactos = contactos;
-        socket.setSoTimeout(10000);
+        //socket.setSoTimeout(10000);
         in = new DataInputStream(socket.getInputStream());
         out = new DataOutputStream(socket.getOutputStream());
     }
@@ -48,8 +48,7 @@ public class RequestHandler implements Runnable {
             // Enviar el certificado del servidor codificado en Base64
             out.writeUTF(encoder.encodeToString(certificate.getEncoded()));
 
-            // Recibir salt, clave secreta cifrada, IV
-            byte[] salt = Base64.getDecoder().decode(in.readUTF());
+            // Recibir clave secreta cifrada y IV
             byte[] encryptedKey = Base64.getDecoder().decode(in.readUTF());
             byte[] iv = Base64.getDecoder().decode(in.readUTF());
 
